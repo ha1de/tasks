@@ -2,8 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using trackingg.Data;
 
-namespace trackingg.Extensions
-{
+
     public static class DatabaseExtensions
     {
         public static async Task EnsureDatabaseCreatedAsync(this IHost host)
@@ -69,4 +68,4 @@ namespace trackingg.Extensions
             }
         }
     }
-}
+

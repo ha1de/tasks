@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using trackingg.Data;
@@ -5,11 +6,16 @@ using trackingg.Models;
 
 namespace trackingg.Pages.Issues
 {
+    [Authorize]
     public class NewModel : PageModel
     {
         private readonly IssueDbContext _context;
 
-        public NewModel(IssueDbContext context) => _context = context;
+        public NewModel(IssueDbContext context) 
+        {
+            _context = context;
+            Issue = new Issue();
+        }
 
         public async Task<IActionResult> OnPost()
         {

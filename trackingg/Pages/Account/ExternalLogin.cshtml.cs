@@ -33,14 +33,15 @@ namespace trackingg.Pages.Account
 
         public IActionResult OnGet()
         {
-            var redirectUrl = Url.Page("./ExternalLogin", "Callback", new { ReturnUrl });
+            // Request a redirect to the external login provider
+            var redirectUrl = Url.Page("./ExternalLogin", pageHandler: "Callback", values: new { ReturnUrl });
             var properties = _signInManager.ConfigureExternalAuthenticationProperties(Provider, redirectUrl);
             return new ChallengeResult(Provider, properties);
         }
 
         public async Task<IActionResult> OnGetCallbackAsync(string? returnUrl = null, string? remoteError = null)
         {
-            returnUrl ??= Url.Content("~/");
+            returnUrl = returnUrl ?? Url.Content("~/");
 
             if (remoteError != null)
             {
@@ -48,6 +49,7 @@ namespace trackingg.Pages.Account
                 return RedirectToPage("./Login", new { ReturnUrl = returnUrl });
             }
 
+            // Get the login info about the user from the external login provider
             var info = await _signInManager.GetExternalLoginInfoAsync();
             if (info == null)
             {
@@ -55,66 +57,75 @@ namespace trackingg.Pages.Account
                 return RedirectToPage("./Login", new { ReturnUrl = returnUrl });
             }
 
-            var result = await _signInManager.ExternalLoginSignInAsync(
-                info.LoginProvider,
-                info.ProviderKey,
-                isPersistent: false,
-                bypassTwoFactor: true);
-
+            // Sign in the user with this external login provider if the user already has a login
+            var result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
+            
             if (result.Succeeded)
             {
-                _logger.LogInformation("{Name} logged in with {LoginProvider} provider.",
-                    info.Principal.Identity?.Name, info.LoginProvider);
+                _logger.LogInformation("{Name} logged in with {LoginProvider} provider.", info.Principal.Identity?.Name, info.LoginProvider);
                 return LocalRedirect(returnUrl);
             }
-
+            
             if (result.IsLockedOut)
             {
                 return RedirectToPage("./Lockout");
             }
-
-            // Register the user if not already registered
-            var email = info.Principal.FindFirstValue(ClaimTypes.Email);
-            var firstName = info.Principal.FindFirstValue(ClaimTypes.GivenName) ?? string.Empty;
-            var lastName = info.Principal.FindFirstValue(ClaimTypes.Surname) ?? string.Empty;
-
-            if (email == null)
+            else
             {
-                ModelState.AddModelError(string.Empty, "Email claim not received from external provider.");
-                return RedirectToPage("./Login", new { ReturnUrl = returnUrl });
-            }
+                // If the user does not have an account, then create one
+                var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+                var firstName = info.Principal.FindFirstValue(ClaimTypes.GivenName) ?? string.Empty;
+                var lastName = info.Principal.FindFirstValue(ClaimTypes.Surname) ?? string.Empty;
 
-            var user = new ApplicationUser
-            {
-                UserName = email,
-                Email = email,
-                EmailConfirmed = true,
-                FirstName = firstName,
-                LastName = lastName,
-                DateJoined = DateTime.Now
-            };
+                if (email == null)
+                {
+                    ModelState.AddModelError(string.Empty, "Email claim not received from Google.");
+                    return RedirectToPage("./Login", new { ReturnUrl = returnUrl });
+                }
 
-            var createResult = await _userManager.CreateAsync(user);
-            if (createResult.Succeeded)
-            {
-                createResult = await _userManager.AddLoginAsync(user, info);
+                var user = new ApplicationUser 
+                { 
+                    UserName = email, 
+                    Email = email,
+                    EmailConfirmed = true,
+                    FirstName = firstName,
+                    LastName = lastName,
+                    DateJoined = DateTime.Now
+                };
+
+                var createResult = await _userManager.CreateAsync(user);
                 if (createResult.Succeeded)
                 {
-                    _logger.LogInformation("User created an account using {Name} provider.", info.LoginProvider);
+                    var addLoginResult = await _userManager.AddLoginAsync(user, info);
+                    if (addLoginResult.Succeeded)
+                    {
+                        _logger.LogInformation("User created an account using {Name} provider.", info.LoginProvider);
+                        
+                        // Add user to default "Guest" role
+                        await _userManager.AddToRoleAsync(user, "Guest");
 
-                    await _userManager.AddToRoleAsync(user, "Guest");
-
-                    await _signInManager.SignInAsync(user, isPersistent: false);
-                    return LocalRedirect(returnUrl);
+                        // Sign in the newly created user
+                        await _signInManager.SignInAsync(user, isPersistent: false);
+                        return LocalRedirect(returnUrl);
+                    }
+                    else
+                    {
+                        foreach (var error in addLoginResult.Errors)
+                        {
+                            ModelState.AddModelError(string.Empty, error.Description);
+                        }
+                    }
                 }
-            }
+                else
+                {
+                    foreach (var error in createResult.Errors)
+                    {
+                        ModelState.AddModelError(string.Empty, error.Description);
+                    }
+                }
 
-            foreach (var error in createResult.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
+                return RedirectToPage("./Login", new { ReturnUrl = returnUrl });
             }
-
-            return RedirectToPage("./Login", new { ReturnUrl = returnUrl });
         }
     }
 }

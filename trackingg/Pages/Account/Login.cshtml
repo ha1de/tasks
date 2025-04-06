@@ -10,6 +10,8 @@
         <div class="col-md-6">
             <section>
                 <form id="account" method="post">
+                    <input type="hidden" asp-for="ReturnUrl" /> <!-- 👈 FIXED -->
+
                     <h4>Use a local account to log in.</h4>
                     <hr />
                     <div asp-validation-summary="All" class="text-danger"></div>
@@ -51,7 +53,8 @@
                 <hr />
                 <div>
                     <p>
-                        <button type="button" class="btn btn-primary" onclick="window.location.href='/Account/ExternalLogin?provider=Google&returnUrl=@(Model.ReturnUrl)'">
+                        <button type="button" class="btn btn-primary"
+                                onclick="window.location.href='/Account/ExternalLogin?provider=Google&returnUrl=@(Model.ReturnUrl)'">
                             <i class="fab fa-google"></i> Google
                         </button>
                     </p>

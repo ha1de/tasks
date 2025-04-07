@@ -1,47 +1,25 @@
 ﻿@page "{id:int}"
-@using Humanizer
+@model DetailModel
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@using Microsoft.Extensions.Localization
 @using trackingg.Extensions
-@model trackingg.Pages.Issues.DetailModel
-@{
-}
+@inject IStringLocalizer<trackingg.SharedResource> Localizer
 
-<div class="mt-5">
-    @if(Model.Issue == null)
-    {
-        
-        <div class="alert alert-warning" role="alert">
-            Issue not found
-        </div>
-    }
-    else
-    {
+<h1>@Localizer["Issue Details"]</h1>
+
+<div class="card">
+    <div class="card-header">
+        <h4>@Model.Issue.Title</h4>
+    </div>
+    <div class="card-body">
+        <p><strong>@Localizer["Description"]:</strong> @Model.Issue.Description</p>
+        <p><strong>@Localizer["Type"]:</strong> @Model.Issue.IssueType</p>
+        <p><strong>@Localizer["Priority"]:</strong> <span class="@Model.Issue.Priority.ToCssClass()">@Model.Issue.Priority</span></p>
+    </div>
+    <div class="card-footer d-flex justify-content-between">
+        <small>@Localizer["Created"] @Model.Issue.Created.ToString("yyyy-MM-dd HH:mm")</small>
         <div>
-            <h3>@Model.Issue.Title</h3>
-            <div class="mb-2">
-                <span class="badge bg-info">@Model.Issue.IssueType</span>
-                <span class="@Model.Issue.Priority.ToCssClass()">@Model.Issue.Priority</span>
-                <span class="badge bg-info">@Model.Issue.Created.Humanize(utcDate:false)</span>
-            </div>
-            <p>@Model.Issue.Description</p>
-            <button id="resolveButton" type="submit" data-issueid="@Model.Issue.Id" class="btn btn-primary btn-lg">Resolve</button>
+            <a asp-page="/Issues/Edit" asp-route-id="@Model.Issue.Id" class="btn btn-sm btn-primary">@Localizer["Edit"]</a>
         </div>
-    }
+    </div>
 </div>
-
-@section Scripts{
-    <script>
-        $(function() {
-            var resolveBtn = document.getElementById('resolveButton')
-            resolveBtn.addEventListener('click', function(e) {
-                e.preventDefault()
-
-                var issueId = resolveBtn.getAttribute('data-issueid')
-
-                $.get(`?handler=resolve&id=${issueId}`, function() {
-                    alert(`Issue ${issueId} has been resolved`)
-                    window.location.href = '/'
-                })
-            })
-        });
-    </script>
-}

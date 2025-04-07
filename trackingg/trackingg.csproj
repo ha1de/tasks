@@ -17,6 +17,9 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+
+    <!-- ✅ Add this line for localization support -->
+    <PackageReference Include="Microsoft.Extensions.Localization" Version="9.0.0-preview.3.24172.9" />
   </ItemGroup>
 
 </Project>

@@ -1,94 +1,28 @@
 ﻿@page
-@model trackingg.Pages.Admin.UsersModel
-@{
-    ViewData["Title"] = "User Management";
-}
+@model UsersModel
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<trackingg.SharedResource> Localizer
 
-<div class="mt-5">
-    <h1>User Management</h1>
+<h1>@Localizer["User Management"]</h1>
 
-    <div class="mb-3">
-        <a asp-page="/Account/Register" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Add New User
-        </a>
-    </div>
-
-    @if (Model.Users.Any())
+<table class="table">
+    <thead>
+    <tr>
+        <th>@Localizer["Email"]</th>
+        <th>@Localizer["Roles"]</th>
+        <th>@Localizer["Actions"]</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var user in Model.Users)
     {
-        <table class="table table-striped">
-            <thead>
-            <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Roles</th>
-                <th>Joined</th>
-                <th>Actions</th>
-            </tr>
-            </thead>
-            <tbody>
-            @foreach (var user in Model.Users)
-            {
-                <tr>
-                    <td>@user.FirstName @user.LastName</td>
-                    <td>@user.Email</td>
-                    <td>@string.Join(", ", user.Roles)</td>
-                    <td>@user.DateJoined.ToShortDateString()</td>
-                    <td>
-                        <a asp-page="./EditUser" asp-route-id="@user.Id" class="btn btn-sm btn-primary">
-                            <i class="fas fa-edit"></i> Edit
-                        </a>
-                        <button type="button" class="btn btn-sm btn-danger"
-                                data-bs-toggle="modal" data-bs-target="#deleteModal"
-                                data-user-id="@user.Id" data-user-name="@user.FirstName @user.LastName">
-                            <i class="fas fa-trash"></i> Delete
-                        </button>
-                    </td>
-                </tr>
-            }
-            </tbody>
-        </table>
+        <tr>
+            <td>@user.Email</td>
+            <td>@string.Join(", ", user.Roles)</td>
+            <td>
+                <a asp-page="EditUser" asp-route-id="@user.Id" class="btn btn-sm btn-primary">@Localizer["Edit"]</a>
+            </td>
+        </tr>
     }
-    else
-    {
-        <div class="alert alert-info">No users found.</div>
-    }
-</div>
-
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                Are you sure you want to delete this user? This action cannot be undone.
-                <p id="userName" class="fw-bold mt-2"></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form method="post">
-                    <input type="hidden" id="userIdToDelete" name="userId" />
-                    <button type="submit" class="btn btn-danger">Delete</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-@section Scripts {
-    <script>
-        $(function() {
-            $('#deleteModal').on('show.bs.modal', function (event) {
-                var button = $(event.relatedTarget);
-                var userId = button.data('user-id');
-                var userName = button.data('user-name');
-
-                var modal = $(this);
-                modal.find('#userIdToDelete').val(userId);
-                modal.find('#userName').text(userName);
-            });
-        });
-    </script>
-}
+    </tbody>
+</table>

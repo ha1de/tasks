@@ -31,12 +31,11 @@ namespace trackingg.Pages.Account
         [BindProperty(SupportsGet = true)]
         public string ReturnUrl { get; set; } = "/";
 
-        public IActionResult OnGet()
+        public IActionResult OnPost(string provider, string returnUrl = null)
         {
-            // Request a redirect to the external login provider
-            var redirectUrl = Url.Page("./ExternalLogin", pageHandler: "Callback", values: new { ReturnUrl });
-            var properties = _signInManager.ConfigureExternalAuthenticationProperties(Provider, redirectUrl);
-            return new ChallengeResult(Provider, properties);
+            var redirectUrl = Url.Page("./ExternalLogin", pageHandler: "Callback", values: new { returnUrl });
+            var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl);
+            return new ChallengeResult(provider, properties);
         }
 
         public async Task<IActionResult> OnGetCallbackAsync(string? returnUrl = null, string? remoteError = null)

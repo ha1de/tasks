@@ -1,14 +1,33 @@
-using Microsoft.EntityFrameworkCore;
-using trackingg.Data;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using System.Globalization;
+using trackingg.Data;
 using trackingg.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add Razor Pages
-builder.Services.AddRazorPages();
+// 🔹 Add localization support
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 
-// Add Identity
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    var supportedCultures = new[] { new CultureInfo("en"), new CultureInfo("lt") };
+
+    options.DefaultRequestCulture = new RequestCulture("en");
+    options.SupportedCultures = supportedCultures;
+    options.SupportedUICultures = supportedCultures;
+
+    // Store preference in cookie
+    options.RequestCultureProviders.Insert(0, new CookieRequestCultureProvider());
+});
+
+// 🔹 Add Razor Pages with view localization
+builder.Services.AddRazorPages()
+    .AddViewLocalization();
+
+// 🔹 Identity setup
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
     options.SignIn.RequireConfirmedAccount = false;
@@ -21,7 +40,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
-// Add external authentication (Google)
+// 🔹 Google login
 builder.Services.AddAuthentication()
     .AddGoogle(options =>
     {
@@ -29,28 +48,46 @@ builder.Services.AddAuthentication()
         options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
     });
 
-// Add authorization policies
+// 🔹 Authorization policies
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("RequireAdminRole", policy => policy.RequireRole("Admin"));
     options.AddPolicy("RequireProjectManagerRole", policy => policy.RequireRole("Admin", "ProjectManager"));
 });
 
-// Configure main application DB context
+// 🔹 Register EF DbContexts
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Register IssueDbContext so it can be injected
 builder.Services.AddDbContext<IssueDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
+// 🔹 Localization middleware
+var locOptions = app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>();
+app.UseRequestLocalization(locOptions.Value);
+
+// 🔹 Middleware pipeline
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
     app.UseHsts();
+}
+async Task SeedRolesAsync(IServiceProvider services)
+{
+    var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+
+    string[] roles = new[] { "User", "Admin", "ProjectManager", "Guest" };
+
+    foreach (var role in roles)
+    {
+        var exists = await roleManager.RoleExistsAsync(role);
+        if (!exists)
+        {
+            await roleManager.CreateAsync(new IdentityRole(role));
+        }
+    }
 }
 
 app.UseHttpsRedirection();
@@ -63,7 +100,17 @@ app.UseAuthorization();
 
 app.MapRazorPages();
 
-// Ensure database is created at startup
+// 🔹 Create DB if it doesn't exist
 await app.EnsureDatabaseCreatedAsync();
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+
+    // Seed roles
+    await SeedRolesAsync(services);
+
+    // Also make sure DB is created
+    await app.EnsureDatabaseCreatedAsync();
+}
 
 app.Run();

@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using trackingg.Data;
 using trackingg.Models;
@@ -24,30 +23,30 @@ namespace trackingg.Pages.Issues
         [BindProperty]
         public Issue Issue { get; set; } = default!;
 
-        public List<Project> Projects { get; set; } = new List<Project>();
-        public List<ApplicationUser> Users { get; set; } = new List<ApplicationUser>();
+        public List<Project> Projects { get; set; } = new();
+        public List<ApplicationUser> Users { get; set; } = new();
 
-        public async Task<IActionResult> OnGetAsync(uint id)
+        public async Task<IActionResult> OnGetAsync(int id)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
-            {
                 return NotFound();
-            }
+
+            Issue = await _context.Issues
+                .Include(i => i.Project)
+                .Include(i => i.AssignedTo)
+                .FirstOrDefaultAsync(m => m.Id == id);
+
+            if (Issue == null)
+                return NotFound();
 
             Projects = await _context.Projects.ToListAsync();
-            Users = await _userManager.Users.ToListAsync(); // Fetch users for the dropdown
+            Users = await _userManager.Users.ToListAsync();
 
-            var issue = await _context.Issues.Include(i => i.AssignedTo).Include(i => i.Project).FirstOrDefaultAsync(m => m.Id == id);
-            if (issue == null)
-            {
-                return NotFound();
-            }
-            Issue = issue;
             return Page();
         }
 
-        public async Task<IActionResult> OnPostAsync()
+        public async Task<IActionResult> OnPostAsync(int id)
         {
             if (!ModelState.IsValid)
             {
@@ -56,36 +55,19 @@ namespace trackingg.Pages.Issues
                 return Page();
             }
 
-            _context.Attach(Issue).State = EntityState.Modified;
+            var issueToUpdate = await _context.Issues.FindAsync((uint)id);
+            if (issueToUpdate == null)
+                return NotFound();
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!IssueExists(Issue.Id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-            catch (DbUpdateException ex)
-            {
-                // Log the inner exception for more details
-                Console.WriteLine($"DbUpdateException: {ex.InnerException?.Message}");
-                throw; // Re-throw the exception
-            }
+            issueToUpdate.Title = Issue.Title;
+            issueToUpdate.Description = Issue.Description;
+            issueToUpdate.Priority = Issue.Priority;
+            issueToUpdate.IssueType = Issue.IssueType;
+            issueToUpdate.ProjectId = Issue.ProjectId;
+            issueToUpdate.AssignedToId = Issue.AssignedToId;
 
-            return RedirectToPage("./Detail", new { id = Issue.Id });
-        }
-
-        private bool IssueExists(uint id)
-        {
-            return _context.Issues.Any(e => e.Id == id);
+            await _context.SaveChangesAsync();
+            return RedirectToPage("/Index");
         }
     }
 }

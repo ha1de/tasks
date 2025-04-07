@@ -1,69 +1,81 @@
-﻿@page "{id}"
-@using Microsoft.AspNetCore.Mvc.TagHelpers
-@using trackingg.Models
+﻿@page "{id:int}"
 @model trackingg.Pages.Issues.EditModel
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<trackingg.SharedResource> Localizer
+
 @{
-    ViewData["Title"] = "Edit Issue";
+    ViewData["Title"] = Localizer["Edit Issue"];
 }
 
-<div class="mt-5">
-    <form method="post">
-        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-        <input type="hidden" asp-for="Issue.Id" />
+<h1>@Localizer["Edit Issue"]</h1>
 
-        <div class="form-group mb-3">
-            <label asp-for="Issue.Title" class="form-label"></label>
-            <input asp-for="Issue.Title" class="form-control" />
-            <span asp-validation-for="Issue.Title" class="text-danger"></span>
-        </div>
+<form method="post">
+    <div asp-validation-summary="All" class="text-danger"></div>
 
-        <div class="form-group mb-3">
-            <label asp-for="Issue.Description" class="form-label"></label>
-            <textarea asp-for="Issue.Description" class="form-control" rows="3"></textarea>
-            <span asp-validation-for="Issue.Description" class="text-danger"></span>
-        </div>
+    <div class="form-group">
+        <label asp-for="Issue.Title">@Localizer["Title"]</label>
+        <input asp-for="Issue.Title" class="form-control" />
+        <span asp-validation-for="Issue.Title" class="text-danger"></span>
+    </div>
 
-        <div class="form-group mb-3">
-            <label asp-for="Issue.IssueType" class="form-label">Type</label>
-            <select class="form-select" asp-for="Issue.IssueType" asp-items="Html.GetEnumSelectList<IssueType>()">
-                <option value="">-- Select Type --</option>
-            </select>
-            <span asp-validation-for="Issue.IssueType" class="text-danger"></span>
-        </div>
+    <div class="form-group">
+        <label asp-for="Issue.Description">@Localizer["Description"]</label>
+        <textarea asp-for="Issue.Description" class="form-control"></textarea>
+        <span asp-validation-for="Issue.Description" class="text-danger"></span>
+    </div>
 
-        <div class="form-group mb-3">
-            <label asp-for="Issue.Priority" class="form-label">Priority</label>
-            <select class="form-select" asp-for="Issue.Priority" asp-items="Html.GetEnumSelectList<Priority>()">
-                <option value="">-- Select Priority --</option>
-            </select>
-            <span asp-validation-for="Issue.Priority" class="text-danger"></span>
-        </div>
+    <div class="form-group">
+        <label asp-for="Issue.IssueType">@Localizer["Type"]</label>
+        <select asp-for="Issue.IssueType" class="form-control">
+            @foreach (var type in Enum.GetValues(typeof(trackingg.Models.IssueType)))
+            {
+                <option value="@type" selected="@(Model.Issue.IssueType == (trackingg.Models.IssueType)type)">
+                    @type
+                </option>
+            }
+        </select>
+        <span asp-validation-for="Issue.IssueType" class="text-danger"></span>
+    </div>
 
-        <div class="form-group mb-3">
-            <label asp-for="Issue.ProjectId" class="form-label">Project</label>
-            <select class="form-select" asp-for="Issue.ProjectId"
-                    asp-items="@(new SelectList(Model.Projects, "Id", "Name"))">
-                <option value="">-- Select Project --</option>
-            </select>
-            <span asp-validation-for="Issue.ProjectId" class="text-danger"></span>
-        </div>
+    <div class="form-group">
+        <label asp-for="Issue.Priority">@Localizer["Priority"]</label>
+        <select asp-for="Issue.Priority" class="form-control">
+            @foreach (var priority in Enum.GetValues(typeof(trackingg.Models.Priority)))
+            {
+                <option value="@priority" selected="@(Model.Issue.Priority == (trackingg.Models.Priority)priority)">
+                    @priority
+                </option>
+            }
+        </select>
+        <span asp-validation-for="Issue.Priority" class="text-danger"></span>
+    </div>
 
-        <div class="form-group mb-3">
-            <label asp-for="Issue.AssignedToId" class="form-label">Assign To</label>
-            <select class="form-select" asp-for="Issue.AssignedToId"
-                    asp-items="@(new SelectList(Model.Users, "Id", "UserName"))">
-                <option value="">-- Select User --</option>
-            </select>
-            <span asp-validation-for="Issue.AssignedToId" class="text-danger"></span>
-        </div>
+    <div class="form-group">
+        <label asp-for="Issue.ProjectId">@Localizer["Project"]</label>
+        <select asp-for="Issue.ProjectId" class="form-control">
+            @foreach (var project in Model.Projects)
+            {
+                <option value="@project.Id" selected="@(Model.Issue.ProjectId == project.Id)">
+                    @project.Name
+                </option>
+            }
+        </select>
+        <span asp-validation-for="Issue.ProjectId" class="text-danger"></span>
+    </div>
 
-        <div class="form-group">
-            <button type="submit" class="btn btn-primary">Save</button>
-            <a asp-page="./Detail" asp-route-id="@Model.Issue.Id" class="btn btn-secondary">Cancel</a>
-        </div>
-    </form>
-</div>
+    <div class="form-group">
+        <label asp-for="Issue.AssignedToId">@Localizer["Assign to"]</label>
+        <select asp-for="Issue.AssignedToId" class="form-control">
+            @foreach (var user in Model.Users)
+            {
+                <option value="@user.Id" selected="@(Model.Issue.AssignedToId == user.Id)">
+                    @user.Email
+                </option>
+            }
+        </select>
+        <span asp-validation-for="Issue.AssignedToId" class="text-danger"></span>
+    </div>
 
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-}
+    <button type="submit" class="btn btn-success">@Localizer["Save"]</button>
+    <a asp-page="/Index" class="btn btn-secondary">@Localizer["Cancel"]</a>
+</form>

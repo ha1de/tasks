@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Collections;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using trackingg.Data;
@@ -23,6 +24,7 @@ namespace trackingg.Pages
         }
 
         public IEnumerable<Issue> Issues { get; set; } = Enumerable.Empty<Issue>();
+        public IEnumerable Projects { get; set; }
 
         public async Task<IActionResult> OnPostDeleteAsync(uint id)
         {

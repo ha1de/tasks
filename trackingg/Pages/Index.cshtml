@@ -7,7 +7,6 @@
 }
 
 <div class="mt-5">
-
     <a asp-page="/Issues/New" class="w-20 btn btn-primary m-2">+ Add new</a>
 
     @if (Model.Issues.Count() == 0)
@@ -20,17 +19,25 @@
             @foreach (var issue in Model.Issues)
             {
                 <div class="card col-3 m-2">
-                    <div class="card-header">
-                        @issue.IssueType
+                    <div class="card-header d-flex justify-content-between">
+                        <span>@issue.IssueType</span>
+                        <form method="post" asp-page-handler="Delete" asp-route-id="@issue.Id"
+                              onsubmit="return confirm('Are you sure you want to delete this issue?');">
+                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        </form>
                     </div>
                     <div class="card-body">
                         <h5 class="card-title text-truncate">
-                            <a asp-page="/Issues/Detail" asp-route-id="@issue.Id" class="link-dark text-decoration-none" >@issue.Title</a>
+                            <a asp-page="/Issues/Detail" asp-route-id="@issue.Id" class="link-dark text-decoration-none">@issue.Title</a>
                         </h5>
                         <span class="@issue.Priority.ToCssClass()">@issue.Priority</span>
                     </div>
-                    <div class="card-footer text-muted">
+                    <div class="card-footer text-muted d-flex justify-content-between">
                         <small>@issue.Created.Humanize(utcDate:false)</small>
+                        <div>
+                            <a asp-page="/Issues/Edit" asp-route-id="@issue.Id" class="btn btn-sm btn-primary">Edit</a>
+                            <a asp-page="/Issues/Detail" asp-route-id="@issue.Id" class="btn btn-sm btn-info ms-1">Details</a>
+                        </div>
                     </div>
                 </div>
             }

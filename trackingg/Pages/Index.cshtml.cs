@@ -8,17 +8,34 @@ namespace trackingg.Pages
 {
     public class IndexModel : PageModel
     {
-        private readonly IssueDbContext _context;
+        private readonly ApplicationDbContext _context;
 
-        public IndexModel(IssueDbContext context) => _context = context;
+        public IndexModel(ApplicationDbContext context) => _context = context;
 
-        public async void OnGet()
+        public async Task OnGet()
         {
-            Issues = await _context.Issues.Where(i => i.Completed == null)
+            Issues = await _context.Issues
+                .Include(i => i.AssignedTo)
+                .Include(i => i.Project)
+                .Where(i => i.Completed == null)
                 .OrderByDescending(i => i.Created)
                 .ToListAsync();
         }
 
         public IEnumerable<Issue> Issues { get; set; } = Enumerable.Empty<Issue>();
+
+        public async Task<IActionResult> OnPostDeleteAsync(uint id)
+        {
+            var issue = await _context.Issues.FindAsync(id);
+            if (issue == null)
+            {
+                return NotFound();
+            }
+
+            _context.Issues.Remove(issue);
+            await _context.SaveChangesAsync();
+
+            return RedirectToPage();
+        }
     }
 }

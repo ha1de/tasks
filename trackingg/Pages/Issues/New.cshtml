@@ -1,35 +1,219 @@
 ﻿@page
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@using Microsoft.AspNetCore.Mvc.Rendering
 @using trackingg.Models
 @model trackingg.Pages.Issues.NewModel
 @{
+    ViewData["Title"] = "New Issue";
+    // Needed for the anti-forgery token in modal AJAX
+    var antiforgeryToken = Model.Antiforgery.GetAndStoreTokens(HttpContext).RequestToken;
 }
+
 <div class="mt-5">
-    <form method="post">
-        <div class="form-group">
-            <label asp-for="Issue.Title" class="form-label">Title</label>
+    <form method="post" id="issueForm">
+        @* Main form validation summary *@
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <div class="form-group mb-3">
+            <label asp-for="Issue.Title" class="form-label"></label>
             <input asp-for="Issue.Title" class="form-control" />
-            <span asp-validation-for="Issue.Title" class="text text-danger"></span>
+            <span asp-validation-for="Issue.Title" class="text-danger"></span>
         </div>
-        <div class="form-group">
-            <label asp-for="Issue.Description" class="form-label">Description</label>
-            <textarea asp-for="Issue.Description" class="form-control" rows="3" ></textarea>
-            <span asp-validation-for="Issue.Description" class="text text-danger"></span>
+        <div class="form-group mb-3">
+            <label asp-for="Issue.Description" class="form-label"></label>
+            <textarea asp-for="Issue.Description" class="form-control" rows="3"></textarea>
+            <span asp-validation-for="Issue.Description" class="text-danger"></span>
         </div>
-
-        <div class="form-group">
+        <div class="form-group mb-3">
             <label asp-for="Issue.IssueType" class="form-label">Type</label>
-            <select class="form-select" 
-                    asp-for="Issue.IssueType"
-                    asp-items="Html.GetEnumSelectList<IssueType>()"></select>
-
+            <select class="form-select" asp-for="Issue.IssueType" asp-items="Html.GetEnumSelectList<IssueType>()">
+                <option value="">-- Select Type --</option>
+            </select>
+            <span asp-validation-for="Issue.IssueType" class="text-danger"></span>
         </div>
-        <div class="form-group">
+        <div class="form-group mb-3">
             <label asp-for="Issue.Priority" class="form-label">Priority</label>
-            <select class="form-select" 
-                    asp-for="Issue.Priority"
-                    asp-items="Html.GetEnumSelectList<Priority>()"></select>
-
+            <select class="form-select" asp-for="Issue.Priority" asp-items="Html.GetEnumSelectList<Priority>()">
+                <option value="">-- Select Priority --</option>
+            </select>
+            <span asp-validation-for="Issue.Priority" class="text-danger"></span>
         </div>
-        <button class="wt-20 col-12 btn btn-primary btn-lg">Submit Issue</button>
+
+        <div class="form-group mb-3">
+            <label asp-for="Issue.ProjectId" class="form-label">Project</label>
+            <div class="input-group">  @* Use input-group for button layout *@
+                <select class="form-select" asp-for="Issue.ProjectId" id="projectSelect"
+                        asp-items="@(new SelectList(Model.Projects, "Id", "Name"))">
+                    <option value="">-- Select Project --</option>
+                </select>
+                @* Button to trigger the modal *@
+                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#newProjectModal">
+                    <i class="fas fa-plus"></i> New Project
+                </button>
+            </div>
+            <span asp-validation-for="Issue.ProjectId" class="text-danger"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Submit Issue</button>
     </form>
 </div>
+
+<div class="modal fade" id="newProjectModal" tabindex="-1" aria-labelledby="newProjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newProjectModalLabel">Create New Project</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                @* Mini-form for the new project - NO form tag needed, handled by JS *@
+                <div id="newProjectErrorSummary" class="text-danger mb-2"></div> @* Error display area *@
+                <div class="mb-3">
+                    <label for="newProjectName" class="form-label">Project Name</label>
+                    <input type="text" class="form-control" id="newProjectName" required>
+                    <div id="newProjectNameError" class="text-danger"></div>
+                </div>
+                <div class="mb-3">
+                    <label for="newProjectDescription" class="form-label">Description (Optional)</label>
+                    <textarea class="form-control" id="newProjectDescription" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="saveNewProjectBtn">Save Project</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    @* Include the Antiforgery token value in JavaScript *@
+    <script> var requestToken = '@antiforgeryToken'; </script>
+
+    @* --- JavaScript for Modal and AJAX --- *@
+    <script>
+        $(function () {
+            // --- Main Issue Form Submission (Your existing AJAX) ---
+            $('#issueForm').on('submit', function (e) {
+                e.preventDefault();
+                var form = $(this);
+                console.log("Submit button clicked. Checking form validity...");
+
+                if (form.valid()) {
+                    console.log("Form is valid. Sending AJAX request...");
+                    $.ajax({
+                        url: '@Url.Page("New")', // URL for the main OnPostAsync
+                        type: 'POST',
+                        data: form.serialize(), // Includes selected ProjectId
+                        // AntiForgery token is usually included by serialize if generated by form tag helper
+                        success: function (response) {
+                            console.log("Main form AJAX Success:", response);
+                            if (response && response.redirectUrl) {
+                                window.location.href = response.redirectUrl;
+                            } else {
+                                // Handle success but no redirect if necessary
+                                alert('Issue submitted, but redirect failed.');
+                            }
+                        },
+                        error: function (xhr, status, error) {
+                            // Main form error handling (as before)
+                            console.error('Main form AJAX Error:', xhr.responseText);
+                            alert('An error occurred submitting the issue.');
+                        }
+                    });
+                } else {
+                    console.log("Form is invalid.");
+                }
+            });
+
+            // --- New Project Modal Logic ---
+            $('#saveNewProjectBtn').on('click', function (e) {
+                e.preventDefault();
+                var projectName = $('#newProjectName').val();
+                var projectDescription = $('#newProjectDescription').val();
+                var errorSummary = $('#newProjectErrorSummary');
+                var nameError = $('#newProjectNameError');
+
+                // Basic client-side validation
+                errorSummary.text('');
+                nameError.text('');
+                if (!projectName || projectName.trim() === '') {
+                    nameError.text('Project Name is required.');
+                    return;
+                }
+
+                console.log('Saving new project...');
+
+                // AJAX call to the new handler
+                $.ajax({
+                    url: '@Url.Page("New", "CreateProject")', // URL for the OnPostCreateProjectAsync handler
+                    type: 'POST',
+                    contentType: 'application/json; charset=utf-8', // Sending JSON
+                    dataType: 'json', // Expecting JSON back
+                    headers: { // Include AntiForgery token
+                        "RequestVerificationToken": requestToken
+                    },
+                    data: JSON.stringify({ // Send data as JSON
+                        projectName: projectName,
+                        projectDescription: projectDescription
+                    }),
+                    success: function (response) {
+                        console.log("Create project AJAX Success:", response);
+                        if (response && response.success) {
+                            // Add the new project to the main dropdown
+                            var $projectSelect = $('#projectSelect');
+                            $projectSelect.append($('<option>', {
+                                value: response.newProjectId,
+                                text: response.newProjectName
+                            }));
+
+                            // Select the newly added project
+                            $projectSelect.val(response.newProjectId);
+
+                            // Close the modal
+                            var modalElement = document.getElementById('newProjectModal');
+                            var modalInstance = bootstrap.Modal.getInstance(modalElement);
+                            if (!modalInstance) { // Fallback if instance not found
+                                modalInstance = new bootstrap.Modal(modalElement);
+                            }
+                            modalInstance.hide();
+
+                            // Clear modal fields
+                            $('#newProjectName').val('');
+                            $('#newProjectDescription').val('');
+                            errorSummary.text('');
+                            nameError.text('');
+
+                        } else {
+                            // Handle failure (e.g., validation errors from server)
+                            var errors = response.errors || ["Failed to create project."];
+                            // Display errors (simplified)
+                            errorSummary.text(errors.join(' '));
+                            console.error('Server validation failed:', response.errors);
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Create project AJAX Error:', xhr.responseText);
+                        try {
+                            var serverErrors = JSON.parse(xhr.responseText);
+                            // Display errors more specifically if needed
+                            errorSummary.text('Error: ' + (serverErrors.title || serverErrors.message || 'Could not save project.'));
+                        } catch (e) {
+                            errorSummary.text('An error occurred saving the project.');
+                        }
+                    }
+                });
+            });
+
+            // Clear modal errors when shown
+            var newProjectModalElement = document.getElementById('newProjectModal');
+            newProjectModalElement.addEventListener('show.bs.modal', function (event) {
+                $('#newProjectErrorSummary').text('');
+                $('#newProjectNameError').text('');
+            });
+
+        });
+    </script>
+}

@@ -7,25 +7,54 @@
 <div class="mt-5">
     <h1>Login</h1>
     <div class="row">
-        <div class="col-md-4">
+        <div class="col-md-6">
             <section>
                 <form id="account" method="post">
+                    <input type="hidden" asp-for="ReturnUrl" /> <!-- 👈 FIXED -->
+
                     <h4>Use a local account to log in.</h4>
                     <hr />
                     <div asp-validation-summary="All" class="text-danger"></div>
+
+                    <div class="form-group mb-3">
+                        <label asp-for="Input.Email" class="form-label"></label>
+                        <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" />
+                        <span asp-validation-for="Input.Email" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label asp-for="Input.Password" class="form-label"></label>
+                        <input asp-for="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" />
+                        <span asp-validation-for="Input.Password" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <div class="form-check">
+                            <input asp-for="Input.RememberMe" class="form-check-input" />
+                            <label asp-for="Input.RememberMe" class="form-check-label"></label>
+                        </div>
+                    </div>
+
                     <div class="form-group">
                         <button type="submit" class="btn btn-primary">Log in</button>
+                    </div>
+
+                    <div class="form-group mt-3">
+                        <p>
+                            <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Register as a new user</a>
+                        </p>
                     </div>
                 </form>
             </section>
         </div>
-        <div class="col-md-6 col-md-offset-2">
+        <div class="col-md-6">
             <section>
                 <h4>Use another service to log in.</h4>
                 <hr />
                 <div>
                     <p>
-                        <button type="button" class="btn btn-primary" onclick="window.location.href='/Account/ExternalLogin?provider=Google&returnUrl=@(Model.ReturnUrl)'">
+                        <button type="button" class="btn btn-primary"
+                                onclick="window.location.href='/Account/ExternalLogin?provider=Google&returnUrl=@(Model.ReturnUrl)'">
                             <i class="fab fa-google"></i> Google
                         </button>
                     </p>
@@ -34,3 +63,7 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

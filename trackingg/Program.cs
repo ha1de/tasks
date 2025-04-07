@@ -1,47 +1,56 @@
 using Microsoft.EntityFrameworkCore;
 using trackingg.Data;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Identity;
+using trackingg.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add authentication
-builder.Services.AddAuthentication(options =>
-    {
-        options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
-        options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-    })
-    .AddCookie()
-    .AddGoogle(googleOptions =>
-    {
-        googleOptions.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? "";
-        googleOptions.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "";
-        googleOptions.CallbackPath = "/signin-google"; // Make sure this matches your redirect URI in Google Console
-        // Add this line to set "Google" as "External" for backward compatibility
-        googleOptions.SignInScheme = "External";
-    })
-    .AddCookie("External", options => 
-    {
-        options.Cookie.Name = "External";
-        options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
-    });
-// Add services to the container.
+// Add Razor Pages
 builder.Services.AddRazorPages();
-builder.Services.AddDbContext<IssueDbContext>(o => o.UseSqlite("filename=Data/Database/Issue.db"));
+
+// Add Identity
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+{
+    options.SignIn.RequireConfirmedAccount = false;
+    options.Password.RequireDigit = true;
+    options.Password.RequiredLength = 8;
+    options.Password.RequireNonAlphanumeric = true;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireLowercase = true;
+})
+.AddEntityFrameworkStores<ApplicationDbContext>()
+.AddDefaultTokenProviders();
+
+// Add external authentication (Google)
+builder.Services.AddAuthentication()
+    .AddGoogle(options =>
+    {
+        options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
+        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+    });
+
+// Add authorization policies
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireAdminRole", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("RequireProjectManagerRole", policy => policy.RequireRole("Admin", "ProjectManager"));
+});
+
+// Configure main application DB context
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Register IssueDbContext so it can be injected
+builder.Services.AddDbContext<IssueDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Configure the HTTP request pipeline
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
-    // Enable HTTPS in production
     app.UseHsts();
-}
-else
-{
-    app.UseDeveloperExceptionPage();
 }
 
 app.UseHttpsRedirection();
@@ -54,5 +63,7 @@ app.UseAuthorization();
 
 app.MapRazorPages();
 
-app.EnsureDatabaseCreated();
+// Ensure database is created at startup
+await app.EnsureDatabaseCreatedAsync();
+
 app.Run();

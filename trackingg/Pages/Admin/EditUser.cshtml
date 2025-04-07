@@ -1,0 +1,62 @@
+﻿@page "{id}"
+@model trackingg.Pages.Admin.EditUserModel
+@{
+    ViewData["Title"] = "Edit User";
+}
+
+<div class="mt-5">
+    <h1>Edit User</h1>
+    
+    @if (Model.UserViewModel == null)
+    {
+        <div class="alert alert-warning">User not found.</div>
+        <a asp-page="./Users" class="btn btn-primary">Back to Users</a>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-md-6">
+                <form method="post">
+                    <input type="hidden" asp-for="UserViewModel.Id" />
+                    
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    
+                    <div class="form-group mb-3">
+                        <label asp-for="UserViewModel.FirstName" class="form-label"></label>
+                        <input asp-for="UserViewModel.FirstName" class="form-control" />
+                        <span asp-validation-for="UserViewModel.FirstName" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label asp-for="UserViewModel.LastName" class="form-label"></label>
+                        <input asp-for="UserViewModel.LastName" class="form-control" />
+                        <span asp-validation-for="UserViewModel.LastName" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label asp-for="UserViewModel.Email" class="form-label"></label>
+                        <input asp-for="UserViewModel.Email" class="form-control" readonly />
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label class="form-label">Roles</label>
+                        @foreach (var role in Model.AllRoles)
+                        {
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" 
+                                       name="SelectedRoles" value="@role"
+                                       @(Model.UserViewModel.Roles.Contains(role) ? "checked" : "") />
+                                <label class="form-check-label">@role</label>
+                            </div>
+                        }
+                    </div>
+                    
+                    <div class="form-group mt-4">
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <a asp-page="./Users" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    }
+</div>

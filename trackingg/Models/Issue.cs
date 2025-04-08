@@ -137,7 +137,7 @@ namespace trackingg.Models // Your models namespace - adjust if needed
         public Issue Issue { get; set; } // <-- MODIFIED: Removed = null!;
 
         public uint? ProjectId { get; set; }
-        public Project Project { get; set; } // <-- MODIFIED: Removed = null!;
+        public Project Project { get; set; } 
     }
 
     // --- Enums used by the classes above ---

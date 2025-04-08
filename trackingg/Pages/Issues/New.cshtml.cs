@@ -2,24 +2,16 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.Mvc.Rendering; // For SelectList if needed elsewhere
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations; // Needed for validation attributes on CreateProjectAjaxModel
-using System.Linq;
-using System.Text.Json; // For JSON handling if needed
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Antiforgery; // Added for IAntiforgery
-using Microsoft.AspNetCore.Mvc.ModelBinding; // Required for ModelValidationState
-using trackingg.Data; // Adjust namespace if needed
-using trackingg.Models; // Adjust namespace if needed
+using System.ComponentModel.DataAnnotations; 
+using Microsoft.AspNetCore.Antiforgery;
+using trackingg.Data;
+using trackingg.Models;
 
-namespace trackingg.Pages.Issues // Adjust namespace if needed
+namespace trackingg.Pages.Issues
 {
     [Authorize]
-    [IgnoreAntiforgeryToken(Order = 1001)] // Ignore token for standard POST, validate manually in AJAX
+    [IgnoreAntiforgeryToken(Order = 1001)]
     public class NewModel : PageModel
     {
         private readonly ApplicationDbContext _context;
@@ -74,7 +66,6 @@ namespace trackingg.Pages.Issues // Adjust namespace if needed
             _logger.LogInformation("OnGetAsync finished populating projects.");
         }
 
-        // Main Handler for submitting the ISSUE form
         public async Task<IActionResult> OnPostAsync()
         {
              _logger.LogInformation("OnPostAsync (Issue Submission) invoked.");
@@ -84,12 +75,11 @@ namespace trackingg.Pages.Issues // Adjust namespace if needed
              if (user == null) {
                  _logger.LogWarning("OnPostAsync: Current user not found unexpectedly.");
                  ModelState.AddModelError("", "Unable to identify current user.");
-                 await PopulateProjectsAsync(); // Repopulate for form redisplay
+                 await PopulateProjectsAsync();
                  if (isAjaxRequest) return Unauthorized();
                  return Page();
              }
 
-            // Pre-assign server-set values (workaround for removed [Required] on Issue.AssignedToId)
             Issue.AssignedToId = user.Id;
 
             LogModelStateErrors("DIAGNOSTIC - Before Check (Issue Submission)");
@@ -98,7 +88,7 @@ namespace trackingg.Pages.Issues // Adjust namespace if needed
                 _logger.LogWarning("OnPostAsync: ModelState is invalid for Issue submission.");
                 LogModelStateErrors("INVALID STATE (Issue Submission)");
                 _logger.LogInformation("OnPostAsync: ModelState invalid, repopulating projects before returning Page.");
-                await PopulateProjectsAsync(); // Repopulate needed data
+                await PopulateProjectsAsync();
                 if (isAjaxRequest) return new BadRequestObjectResult(ModelState);
                 return Page();
             }
@@ -127,9 +117,6 @@ namespace trackingg.Pages.Issues // Adjust namespace if needed
             }
         }
 
-
-        // --- Handler for Creating Project via AJAX ---
-
         public class CreateProjectAjaxModel
         {
             [Required(ErrorMessage = "Project Name is required.")]
@@ -140,12 +127,10 @@ namespace trackingg.Pages.Issues // Adjust namespace if needed
             public string ProjectDescription { get; set; }
         }
 
-        // Corrected Handler using Manual Validation
         public async Task<IActionResult> OnPostCreateProjectAsync([FromBody] CreateProjectAjaxModel data)
         {
             _logger.LogInformation("OnPostCreateProjectAsync invoked via AJAX. Data received: ProjectName='{ProjectName}'", data?.ProjectName);
 
-            // --- Attempt to clear Issue.* keys from ModelState ---
              var keysToClear = ModelState.Keys.Where(k => k.StartsWith("Issue")).ToList();
              if (keysToClear.Any())
              {
@@ -153,9 +138,7 @@ namespace trackingg.Pages.Issues // Adjust namespace if needed
                  foreach (var key in keysToClear) { ModelState.Remove(key); } // Try removing directly
              }
              if (ModelState.ContainsKey("Issue")) { ModelState.Remove("Issue"); _logger.LogInformation("Removed top-level 'Issue' key."); }
-            // --- End Clearing ---
-
-            // 1. Validate Antiforgery Token
+    
             try {
                 await _antiforgery.ValidateRequestAsync(HttpContext);
                  _logger.LogInformation("Antiforgery token validated successfully for CreateProject.");
@@ -164,41 +147,32 @@ namespace trackingg.Pages.Issues // Adjust namespace if needed
                  return new JsonResult(new { success = false, errors = new[] { "Security validation failed." } }) { StatusCode = 400 };
             }
 
-            // 2. Check User Authentication
             var user = await _userManager.GetUserAsync(User);
             if (user == null) {
                  _logger.LogWarning("CreateProject: User not authenticated.");
                  return new JsonResult(new { success = false, errors = new[] { "User not authenticated." } }) { StatusCode = 401 };
             }
 
-            // 3. *** MANUAL Validation for Project Data ***
             var projectValidationErrors = new List<string>();
             if (data == null) {
                 projectValidationErrors.Add("No project data received.");
             } else {
-                 // Validate Project Name
                  if (string.IsNullOrWhiteSpace(data.ProjectName)) { projectValidationErrors.Add("Project Name is required."); }
                  else { data.ProjectName = data.ProjectName.Trim(); if (data.ProjectName.Length > 100) projectValidationErrors.Add("Project Name cannot exceed 100 characters."); }
-                 // Validate Project Description
                  if (data.ProjectDescription != null && data.ProjectDescription.Length > 300) { projectValidationErrors.Add("Project Description cannot exceed 300 characters."); }
             }
-
-            // Check if manual validation found errors
+            
             if (projectValidationErrors.Any()) {
                 _logger.LogWarning("CreateProject: Invalid project data based on manual checks. Errors: {Errors}", string.Join("; ", projectValidationErrors));
-                // Return ONLY the project-specific errors
                 return new JsonResult(new { success = false, errors = projectValidationErrors }) { StatusCode = 400 };
             }
-            // --- End MANUAL Validation ---
 
-            // 4. Check for Duplicate Project Name
-             bool nameExists = await _context.Projects.AnyAsync(p => p.Name == data.ProjectName); // Already trimmed
+             bool nameExists = await _context.Projects.AnyAsync(p => p.Name == data.ProjectName);
              if (nameExists) {
                   _logger.LogWarning("CreateProject: Project name '{ProjectName}' already exists.", data.ProjectName);
                   return new JsonResult(new { success = false, errors = new[] { $"Project name '{data.ProjectName}' already exists." } }) { StatusCode = 400 };
              }
-
-            // 5. Create and Save New Project
+             
             var newProject = new Project {
                 Name = data.ProjectName,
                 Description = data.ProjectDescription ?? string.Empty,
@@ -219,7 +193,6 @@ namespace trackingg.Pages.Issues // Adjust namespace if needed
             }
         }
 
-        // Helper method to log ModelState errors
         private void LogModelStateErrors(string contextMessage)
         {
              if (!ModelState.IsValid) {

@@ -8,7 +8,6 @@ using trackingg.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 🔹 Add localization support
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 
 builder.Services.Configure<RequestLocalizationOptions>(options =>
@@ -18,16 +17,12 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
     options.DefaultRequestCulture = new RequestCulture("en");
     options.SupportedCultures = supportedCultures;
     options.SupportedUICultures = supportedCultures;
-
-    // Store preference in cookie
     options.RequestCultureProviders.Insert(0, new CookieRequestCultureProvider());
 });
 
-// 🔹 Add Razor Pages with view localization
 builder.Services.AddRazorPages()
     .AddViewLocalization();
 
-// 🔹 Identity setup
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
     options.SignIn.RequireConfirmedAccount = false;
@@ -40,7 +35,6 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
-// 🔹 Google login
 builder.Services.AddAuthentication()
     .AddGoogle(options =>
     {
@@ -48,14 +42,12 @@ builder.Services.AddAuthentication()
         options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
     });
 
-// 🔹 Authorization policies
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("RequireAdminRole", policy => policy.RequireRole("Admin"));
     options.AddPolicy("RequireProjectManagerRole", policy => policy.RequireRole("Admin", "ProjectManager"));
 });
 
-// 🔹 Register EF DbContexts
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -64,11 +56,9 @@ builder.Services.AddDbContext<IssueDbContext>(options =>
 
 var app = builder.Build();
 
-// 🔹 Localization middleware
 var locOptions = app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>();
 app.UseRequestLocalization(locOptions.Value);
 
-// 🔹 Middleware pipeline
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
@@ -100,16 +90,13 @@ app.UseAuthorization();
 
 app.MapRazorPages();
 
-// 🔹 Create DB if it doesn't exist
 await app.EnsureDatabaseCreatedAsync();
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
 
-    // Seed roles
     await SeedRolesAsync(services);
 
-    // Also make sure DB is created
     await app.EnsureDatabaseCreatedAsync();
 }
 

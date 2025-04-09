@@ -71,7 +71,6 @@ namespace trackingg.Pages.Admin
                 return NotFound();
             }
 
-            // Update user properties
             user.FirstName = UserViewModel.FirstName;
             user.LastName = UserViewModel.LastName;
             
@@ -86,10 +85,8 @@ namespace trackingg.Pages.Admin
                 return Page();
             }
 
-            // Handle roles
             var userRoles = await _userManager.GetRolesAsync(user);
             
-            // Remove roles not in selection
             var rolesToRemove = userRoles.Where(r => !SelectedRoles.Contains(r)).ToList();
             if (rolesToRemove.Any())
             {
@@ -105,7 +102,6 @@ namespace trackingg.Pages.Admin
                 }
             }
 
-            // Add newly selected roles
             var rolesToAdd = SelectedRoles.Where(r => !userRoles.Contains(r)).ToList();
             if (rolesToAdd.Any())
             {
@@ -125,7 +121,6 @@ namespace trackingg.Pages.Admin
         }
     }
 
-    // Move this class outside of EditUserModel to fix the duplicate definition error
     public class UserViewModel
     {
         public string Id { get; set; } = string.Empty;

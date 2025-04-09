@@ -56,7 +56,6 @@ namespace trackingg.Pages.Account
                 return RedirectToPage("./Login", new { ReturnUrl = returnUrl });
             }
 
-            // Sign in the user with this external login provider if the user already has a login
             var result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
             
             if (result.Succeeded)
@@ -71,7 +70,6 @@ namespace trackingg.Pages.Account
             }
             else
             {
-                // If the user does not have an account, then create one
                 var email = info.Principal.FindFirstValue(ClaimTypes.Email);
                 var firstName = info.Principal.FindFirstValue(ClaimTypes.GivenName) ?? string.Empty;
                 var lastName = info.Principal.FindFirstValue(ClaimTypes.Surname) ?? string.Empty;

@@ -44,7 +44,6 @@ namespace trackingg.Pages.Account
         {
             ReturnUrl = returnUrl ?? Url.Content("~/");
 
-            // Clear any existing external cookies
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
 
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
